@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="hero-content">
+        <h1>Welcome to CampusCare</h1>
+        <p class="hero-subtitle">Your campus issue reporting and management system</p>
+        <div class="hero-buttons">
+            <a href="{{ url_for('new_issue') }}" class="btn btn-primary btn-large">
+                <i class="fas fa-plus-circle"></i> Report an Issue
+            </a>
+            <a href="{{ url_for('issues_list') }}" class="btn btn-secondary btn-large">
+                <i class="fas fa-list"></i> View All Issues
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fas fa-exclamation-circle"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Total Issues</h3>
+            <p class="stat-number">{{ total_issues }}</p>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon status-open">
+            <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Open Issues</h3>
+            <p class="stat-number">{{ open_issues }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Issues -->
+<div class="card">
+    <div class="card-header">
+        <h2><i class="fas fa-history"></i> Recent Issues</h2>
+        <a href="{{ url_for('issues_list') }}" class="btn btn-secondary">
+            <i class="fas fa-eye"></i> View All
+        </a>
+    </div>
+    
+    {% if recent_issues %}
+    <div class="table-responsive">
+        <table class="issues-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for issue in recent_issues %}
+                <tr>
+                    <td class="issue-title">{{ issue.title }}</td>
+                    <td>
+                        <span class="category-tag">{{ issue.category }}</span>
+                    </td>
+                    <td>{{ issue.location }}</td>
+                    <td>
+                        <span class="status-badge {{ issue.status|get_status_color }}">
+                            {{ issue.status }}
+                        </span>
+                    </td>
+                    <td>{{ issue.created_at|format_date }}</td>
+                    <td>
+                        <a href="{{ url_for('view_issue', issue_id=issue.id) }}" class="btn btn-small">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-clipboard-check fa-3x"></i>
+        <h3>No Issues Found</h3>
+        <p>No issues have been reported yet. Be the first to report one!</p>
+        <a href="{{ url_for('new_issue') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Report First Issue
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

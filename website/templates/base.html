@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusCare - {% block title %}Issue Reporting System{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <i class="fas fa-university"></i>
+                <h1>CampusCare</h1>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="{{ url_for('home') }}" {% if request.endpoint == 'home' %}class="active"{% endif %}>
+                    <i class="fas fa-home"></i> Home
+                </a></li>
+                <li><a href="{{ url_for('dashboard') }}" {% if request.endpoint == 'dashboard' %}class="active"{% endif %}>
+                    <i class="fas fa-chart-bar"></i> Dashboard
+                </a></li>
+                <li><a href="{{ url_for('issues_list') }}" {% if request.endpoint == 'issues_list' %}class="active"{% endif %}>
+                    <i class="fas fa-list"></i> Issues
+                </a></li>
+                <li><a href="{{ url_for('new_issue') }}" {% if request.endpoint == 'new_issue' %}class="active"{% endif %}>
+                    <i class="fas fa-plus-circle"></i> Report Issue
+                </a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="container">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <!-- Main Content -->
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p><i class="fas fa-copyright"></i> 2024 CampusCare - Campus Issue Reporting System</p>
+        </div>
+    </footer>
+</body>
+</html>

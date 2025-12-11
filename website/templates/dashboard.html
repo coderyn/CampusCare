@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1><i class="fas fa-chart-bar"></i> Analytics Dashboard</h1>
+</div>
+
+<!-- Summary Stats -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Total Issues</h3>
+            <p class="stat-number">{{ total_issues }}</p>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon status-open">
+            <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Open</h3>
+            <p class="stat-number">{{ open_issues }}</p>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon status-in-progress">
+            <i class="fas fa-tools"></i>
+        </div>
+        <div class="stat-info">
+            <h3>In Progress</h3>
+            <p class="stat-number">{{ in_progress_issues }}</p>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon status-resolved">
+            <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Resolved</h3>
+            <p class="stat-number">{{ resolved_issues }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Issues by Category -->
+<div class="card">
+    <h2><i class="fas fa-chart-pie"></i> Issues by Category</h2>
+    {% if category_stats %}
+    <div class="chart-container">
+        <table class="analytics-table">
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Count</th>
+                    <th>Percentage</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for category, count in category_stats %}
+                <tr>
+                    <td>{{ category }}</td>
+                    <td><strong>{{ count }}</strong></td>
+                    <td>
+                        {% set percentage = (count / total_issues * 100)|round(1) if total_issues > 0 else 0 %}
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill" data-width="{{ percentage }}"></div>
+                                <span class="progress-label">{{ percentage }}%</span>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="no-data">No category data available</p>
+    {% endif %}
+</div>
+
+<!-- Issues by Status -->
+<div class="card">
+    <h2><i class="fas fa-chart-bar"></i> Issues by Status</h2>
+    {% if status_stats %}
+    <div class="status-grid">
+        {% for status, count in status_stats %}
+        <div class="status-card {{ status|get_status_color }}">
+            <div class="status-info">
+                <h4>{{ status }}</h4>
+                <p class="status-count">{{ count }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="no-data">No status data available</p>
+    {% endif %}
+</div>
+{% endblock %}
