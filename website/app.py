@@ -2,12 +2,15 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func, desc
 from datetime import datetime
+import os
 
 # Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'campuscare-secret-key-2024'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads')
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024   # 5 MB (optional)
 
 # Initialize database
 db = SQLAlchemy(app)
@@ -46,6 +49,7 @@ class Issue(db.Model):
     media_url = db.Column(db.String(200))  # For uploaded images/videos
     status = db.Column(db.String(20), default='Open')
     priority = db.Column(db.String(20), default='Medium')
+    image_filename = db.Column(db.String(255), nullable=True)
     
     # Foreign keys
     reported_by = db.Column(db.Integer, db.ForeignKey('user.id'))
@@ -221,6 +225,20 @@ def new_issue():
         if not all([title, description, category, location]):
             flash('Please fill all required fields', 'error')
             return redirect(url_for('new_issue'))
+        
+        # 🔹 handle uploaded image
+        image_file = request.files.get('image')
+        image_filename = None
+
+        if image_file and image_file.filename != '':
+            if not allowed_file(image_file.filename):
+                flash('Only png, jpg, jpeg, gif files are allowed', 'error')
+                return redirect(url_for('new_issue'))
+
+            filename = secure_filename(image_file.filename)
+            save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            image_file.save(save_path)
+            image_filename = filename
         
         issue = Issue(
             title=title,
