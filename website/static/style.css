@@ -331,6 +331,10 @@ main {
     margin-top: 20px;
 }
 
+.issue-actions {
+    margin-top: 25px;
+}
+
 .comment-list {
     list-style: none;
     padding-left: 0;
@@ -349,6 +353,16 @@ main {
 
 .comment-content {
     font-size: 0.95rem;
+}
+
+.comment-form {
+    margin-bottom: 25px;
+    text-align: right;
+}
+
+.comment-form .btn {
+    font-size: 0.8rem;
+    padding: 4px 10px;
 }
 
 /* Progress bars */

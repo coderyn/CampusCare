@@ -3,7 +3,9 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func, desc
 from datetime import datetime
 from werkzeug.utils import secure_filename
+from flask import session
 import os
+import secrets
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -77,6 +79,7 @@ class Comment(db.Model):
 
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    edit_token = db.Column(db.String(64), nullable=False)
 
     def __repr__(self):
         return f'<Comment {self.id} on Issue {self.issue_id}>'
@@ -285,18 +288,62 @@ def view_issue(issue_id):
     issue = Issue.query.get_or_404(issue_id)
     
     if request.method == 'POST':
+        token = secrets.token_hex(16)  # random secret token
         comment_text = request.form.get('comment')
-        if comment_text and comment_text.strip():
-            new_comment = Comment(issue_id=issue.id, content=comment_text.strip())
-            db.session.add(new_comment)
-            db.session.commit()
-            flash('Comment added!', 'success')
-        else:
-            flash('Comment cannot be empty.', 'error')
+        new_comment = Comment(
+            issue_id=issue.id,
+            content=comment_text.strip(),
+            edit_token=token
+            )
+        
+        db.session.add(new_comment)
+        db.session.commit()
+        
+        # store token in this user's browser session so they can edit/delete later
+        my_tokens = session.get('my_comment_tokens', [])
+        my_tokens.append(token)
+        session['my_comment_tokens'] = my_tokens
 
         return redirect(url_for('view_issue', issue_id=issue.id))
 
     return render_template('view_issue.html', issue=issue)
+
+@app.route('/comment/<int:comment_id>/delete', methods=['POST'])
+def delete_comment(comment_id):
+    comment = Comment.query.get_or_404(comment_id)
+
+    my_tokens = session.get('my_comment_tokens', [])
+    if comment.edit_token not in my_tokens:
+        flash("You can only delete your own comment (same browser).", "error")
+        return redirect(url_for('view_issue', issue_id=comment.issue_id))
+
+    db.session.delete(comment)
+    db.session.commit()
+    flash("Comment deleted.", "success")
+    return redirect(url_for('view_issue', issue_id=comment.issue_id))
+
+@app.route('/comment/<int:comment_id>/edit', methods=['GET', 'POST'])
+def edit_comment(comment_id):
+    comment = Comment.query.get_or_404(comment_id)
+
+    my_tokens = session.get('my_comment_tokens', [])
+    if comment.edit_token not in my_tokens:
+        flash("You can only edit your own comment (same browser).", "error")
+        return redirect(url_for('view_issue', issue_id=comment.issue_id))
+
+    if request.method == 'POST':
+        new_text = request.form.get('content', '').strip()
+        if not new_text:
+            flash("Comment cannot be empty.", "error")
+            return redirect(url_for('edit_comment', comment_id=comment.id))
+
+        comment.content = new_text
+        comment.updated_at = datetime.utcnow()
+        db.session.commit()
+        flash("Comment updated.", "success")
+        return redirect(url_for('view_issue', issue_id=comment.issue_id))
+
+    return render_template('edit_comment.html', comment=comment)
 
 
 # ========== TEMPLATE FILTERS ==========
