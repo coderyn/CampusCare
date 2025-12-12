@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func, desc
 from datetime import datetime
+from werkzeug.utils import secure_filename
 import os
 
 # Initialize Flask app
@@ -231,10 +232,6 @@ def new_issue():
         image_filename = None
 
         if image_file and image_file.filename != '':
-            if not allowed_file(image_file.filename):
-                flash('Only png, jpg, jpeg, gif files are allowed', 'error')
-                return redirect(url_for('new_issue'))
-
             filename = secure_filename(image_file.filename)
             save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             image_file.save(save_path)
@@ -247,7 +244,8 @@ def new_issue():
             location=location,
             priority=priority,
             status='Open'
-        )
+            image_filename=image_filename
+            )
         
         db.session.add(issue)
         db.session.commit()
