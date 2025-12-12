@@ -51,6 +51,7 @@ class Issue(db.Model):
     status = db.Column(db.String(20), default='Open')
     priority = db.Column(db.String(20), default='Medium')
     image_filename = db.Column(db.String(255), nullable=True)
+    comments = db.relationship('Comment', backref='issue', lazy=True)
     
     # Foreign keys
     reported_by = db.Column(db.Integer, db.ForeignKey('user.id'))
@@ -62,6 +63,23 @@ class Issue(db.Model):
     
     def __repr__(self):
         return f'<Issue {self.title}>'
+
+#database for comment
+class Comment(db.Model):
+    """Model for issue comments (shared platform discussion)"""
+    id = db.Column(db.Integer, primary_key=True)
+    
+    issue_id = db.Column(
+        db.Integer,
+        db.ForeignKey('issue.id'),
+        nullable=False
+    )
+
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<Comment {self.id} on Issue {self.issue_id}>'
 
 # ========== HELPER FUNCTIONS ==========
 def get_category_stats():
@@ -205,13 +223,13 @@ def issues_list():
     statuses = db.session.query(Issue.status).distinct().all()
     statuses = [s[0] for s in statuses]
     
-    return render_template('issues.html',
-                         issues=issues,
-                         categories=categories,
-                         statuses=statuses,
-                         search=search,
-                         category_filter=category,
-                         status_filter=status)
+    return render_template('issue.html',
+                           issues=issues,
+                           categories=categories,
+                           statuses=statuses,
+                           search=search,
+                           category_filter=category,
+                           status_filter=status)
 
 @app.route('/issue/new', methods=['GET', 'POST'])
 def new_issue():
@@ -227,7 +245,7 @@ def new_issue():
             flash('Please fill all required fields', 'error')
             return redirect(url_for('new_issue'))
         
-        # 🔹 handle uploaded image
+        # uploaded image
         image_file = request.files.get('image')
         image_filename = None
 
@@ -261,11 +279,25 @@ def new_issue():
                          categories=categories,
                          priorities=priorities)
 
-@app.route('/issue/<int:issue_id>')
+@app.route('/issue/<int:issue_id>', methods=['GET', 'POST'])
 def view_issue(issue_id):
     """View specific issue details"""
     issue = Issue.query.get_or_404(issue_id)
+    
+    if request.method == 'POST':
+        comment_text = request.form.get('comment')
+        if comment_text and comment_text.strip():
+            new_comment = Comment(issue_id=issue.id, content=comment_text.strip())
+            db.session.add(new_comment)
+            db.session.commit()
+            flash('Comment added!', 'success')
+        else:
+            flash('Comment cannot be empty.', 'error')
+
+        return redirect(url_for('view_issue', issue_id=issue.id))
+
     return render_template('view_issue.html', issue=issue)
+
 
 # ========== TEMPLATE FILTERS ==========
 @app.template_filter('format_date')

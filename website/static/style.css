@@ -327,6 +327,30 @@ main {
     color: #333;
 }
 
+.issue-comments {
+    margin-top: 20px;
+}
+
+.comment-list {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 15px;
+}
+
+.comment-item {
+    padding: 6px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.comment-meta {
+    font-size: 0.8rem;
+    color: #777;
+}
+
+.comment-content {
+    font-size: 0.95rem;
+}
+
 /* Progress bars */
 .progress-container {
     position: relative;
