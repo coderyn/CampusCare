@@ -243,7 +243,7 @@ def new_issue():
             category=category,
             location=location,
             priority=priority,
-            status='Open'
+            status='Open',
             image_filename=image_filename
             )
         
