@@ -335,6 +335,47 @@ main {
     margin-top: 25px;
 }
 
+/*rating*/
+.star-rating {
+  direction: rtl;
+  display: inline-flex;
+  font-size: 28px;
+}
+
+.star-rating input {
+  display: none;
+}
+
+.star-rating label {
+  color: #ccc;
+  cursor: pointer;
+  padding: 0 3px;
+}
+
+/* Hover effect */
+.star-rating label:hover,
+.star-rating label:hover ~ label {
+  color: #f5b301;
+}
+
+/* Selected stars */
+.star-rating input:checked ~ label {
+  color: #f5b301;
+}
+
+.rating-actions {
+    text-align: right;
+    margin-top: 10px;
+}
+
+.rating-actions .btn {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+}
+
+
+
+/*comment*/
 .comment-header {
     display: flex;
     justify-content: space-between;
