@@ -1,7 +1,12 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, abort, render_template_string
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import func, desc
+from sqlalchemy import func
 from datetime import datetime
+from functools import wraps
+
+# Authentication
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -12,29 +17,50 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Initialize database
 db = SQLAlchemy(app)
 
+# Flask-Login setup
+login_manager = LoginManager()
+login_manager.login_view = 'login'
+login_manager.init_app(app)
+
+@login_manager.user_loader
+def load_user(user_id):
+    try:
+        return User.query.get(int(user_id))
+    except Exception:
+        return None
+
 # ========== DATABASE MODELS ==========
-class User(db.Model):
+class User(db.Model, UserMixin):
     """User model (for future authentication)"""
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
-    role = db.Column(db.String(20), default='student')  # student, admin, staff
+    role = db.Column(db.String(20), default='student')  # student, admin, staff, maintenance
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Relationships - FIXED: Specify foreign_keys
-    reported_issues = db.relationship('Issue', 
-                                     foreign_keys='Issue.reported_by',
-                                     backref='reporter',
-                                     lazy=True)
-    
+
+    # Relationships
+    reported_issues = db.relationship('Issue',
+                                      foreign_keys='Issue.reported_by',
+                                      backref='reporter',
+                                      lazy=True)
+
     assigned_issues = db.relationship('Issue',
-                                     foreign_keys='Issue.assigned_to',
-                                     backref='assignee',
-                                     lazy=True)
-    
+                                      foreign_keys='Issue.assigned_to',
+                                      backref='assignee',
+                                      lazy=True)
+
     def __repr__(self):
         return f'<User {self.username}>'
+
+    def set_password(self, raw_password):
+        self.password = generate_password_hash(raw_password)
+
+    def check_password(self, raw_password):
+        return check_password_hash(self.password, raw_password)
+
+    def is_admin(self):
+        return self.role == 'admin'
 
 class Issue(db.Model):
     """Model for storing campus issues"""
@@ -46,15 +72,15 @@ class Issue(db.Model):
     media_url = db.Column(db.String(200))  # For uploaded images/videos
     status = db.Column(db.String(20), default='Open')
     priority = db.Column(db.String(20), default='Medium')
-    
+
     # Foreign keys
     reported_by = db.Column(db.Integer, db.ForeignKey('user.id'))
     assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'))
     department = db.Column(db.String(50))  # Assigned department
-    
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     def __repr__(self):
         return f'<Issue {self.title}>'
 
@@ -121,10 +147,22 @@ def add_sample_data():
             priority="Medium"
         )
     ]
-    
+
     db.session.add_all(sample_issues)
     db.session.commit()
     print(f"✅ Added {len(sample_issues)} sample issues")
+
+# ========== AUTH HELPERS ==========
+def role_required(role):
+    """Decorator to require a specific role for a route"""
+    def decorator(f):
+        @wraps(f)
+        def wrapped(*args, **kwargs):
+            if not current_user.is_authenticated or current_user.role != role:
+                abort(403)
+            return f(*args, **kwargs)
+        return wrapped
+    return decorator
 
 # ========== ROUTES ==========
 @app.route('/')
@@ -134,10 +172,10 @@ def home():
     total_issues = Issue.query.count()
     open_issues = Issue.query.filter_by(status='Open').count()
     recent_issues = get_recent_issues(5)
-    
+
     # Get category stats for top categories
     category_stats = get_category_stats()[:3]  # Top 3 categories
-    
+
     return render_template('home.html',
                          total_issues=total_issues,
                          open_issues=open_issues,
@@ -151,15 +189,15 @@ def dashboard():
     open_issues = Issue.query.filter_by(status='Open').count()
     in_progress_issues = Issue.query.filter_by(status='In Progress').count()
     resolved_issues = Issue.query.filter_by(status='Resolved').count()
-    
+
     category_stats = get_category_stats()
     status_stats = get_status_stats()
     recent_issues = get_recent_issues(10)
-    
+
     # Calculate percentages
     open_percentage = round((open_issues / total_issues * 100), 1) if total_issues > 0 else 0
     resolved_percentage = round((resolved_issues / total_issues * 100), 1) if total_issues > 0 else 0
-    
+
     return render_template('dashboard.html',
                          total_issues=total_issues,
                          open_issues=open_issues,
@@ -177,30 +215,30 @@ def issues_list():
     search = request.args.get('search', '')
     category = request.args.get('category', '')
     status = request.args.get('status', '')
-    
+
     query = Issue.query
-    
+
     if search:
         query = query.filter(
-            (Issue.title.ilike(f'%{search}%')) | 
+            (Issue.title.ilike(f'%{search}%')) |
             (Issue.description.ilike(f'%{search}%'))
         )
-    
+
     if category:
         query = query.filter(Issue.category == category)
-    
+
     if status:
         query = query.filter(Issue.status == status)
-    
+
     issues = query.order_by(Issue.created_at.desc()).all()
-    
+
     categories = db.session.query(Issue.category).distinct().all()
     categories = [c[0] for c in categories]
-    
+
     statuses = db.session.query(Issue.status).distinct().all()
     statuses = [s[0] for s in statuses]
-    
-    return render_template('issues.html',
+
+    return render_template('issue.html',
                          issues=issues,
                          categories=categories,
                          statuses=statuses,
@@ -217,11 +255,11 @@ def new_issue():
         category = request.form.get('category')
         location = request.form.get('location')
         priority = request.form.get('priority')
-        
+
         if not all([title, description, category, location]):
             flash('Please fill all required fields', 'error')
             return redirect(url_for('new_issue'))
-        
+
         issue = Issue(
             title=title,
             description=description,
@@ -230,17 +268,17 @@ def new_issue():
             priority=priority,
             status='Open'
         )
-        
+
         db.session.add(issue)
         db.session.commit()
-        
+
         flash('Issue reported successfully! Our team will review it shortly.', 'success')
         return redirect(url_for('home'))
-    
-    categories = ['Furniture', 'Plumbing', 'Electrical', 'Network', 'HVAC', 
+
+    categories = ['Furniture', 'Plumbing', 'Electrical', 'Network', 'HVAC',
                   'Equipment', 'Infrastructure', 'Security', 'Cleaning', 'Other']
     priorities = ['Low', 'Medium', 'High', 'Critical']
-    
+
     return render_template('new_issue.html',
                          categories=categories,
                          priorities=priorities)
@@ -250,6 +288,140 @@ def view_issue(issue_id):
     """View specific issue details"""
     issue = Issue.query.get_or_404(issue_id)
     return render_template('view_issue.html', issue=issue)
+
+# ========== ADMIN ROUTES ==========
+@app.route('/admin/issues')
+@login_required
+@role_required('admin')
+def admin_issues():
+    """Admin: list and filter issues"""
+    status = request.args.get('status', '')
+    department = request.args.get('department', '')
+
+    query = Issue.query
+    if status:
+        query = query.filter(Issue.status == status)
+    if department:
+        query = query.filter(Issue.department == department)
+
+    issues = query.order_by(Issue.created_at.desc()).all()
+    staff_users = User.query.filter(User.role.in_(['staff', 'maintenance', 'admin'])).all()
+
+    departments = ['Maintenance', 'Electrical', 'Plumbing', 'Network', 'HVAC', 'Cleaning', 'Security', 'Other']
+
+    return render_template('admin_issues.html', issues=issues, staff_users=staff_users, departments=departments, status_filter=status, department_filter=department)
+
+@app.route('/admin/issue/<int:issue_id>')
+@login_required
+@role_required('admin')
+def admin_view_issue(issue_id):
+    """Admin: view an issue and assignment form"""
+    issue = Issue.query.get_or_404(issue_id)
+    staff_users = User.query.filter(User.role.in_(['staff', 'maintenance', 'admin'])).all()
+    departments = ['Maintenance', 'Electrical', 'Plumbing', 'Network', 'HVAC', 'Cleaning', 'Security', 'Other']
+    return render_template('admin_view_issue.html', issue=issue, staff_users=staff_users, departments=departments)
+
+@app.route('/admin/issue/<int:issue_id>/assign', methods=['POST'])
+@login_required
+@role_required('admin')
+def admin_assign_issue(issue_id):
+    """Admin: assign issue to a user/department and update status/priority"""
+    issue = Issue.query.get_or_404(issue_id)
+    assigned_to = request.form.get('assigned_to')  # user id or ''
+    department = request.form.get('department')
+    status = request.form.get('status')
+    priority = request.form.get('priority')
+
+    if assigned_to:
+        try:
+            user = User.query.get(int(assigned_to))
+            if user:
+                issue.assigned_to = user.id
+        except Exception:
+            pass
+    else:
+        issue.assigned_to = None
+
+    if department is not None:
+        issue.department = department or None
+
+    if status:
+        issue.status = status
+
+    if priority:
+        issue.priority = priority
+
+    db.session.commit()
+    flash('Issue updated and assignment saved', 'success')
+    return redirect(url_for('admin_view_issue', issue_id=issue.id))
+
+# ========== SIMPLE LOGIN (minimal template rendered inline) ==========
+LOGIN_PAGE = """
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>CampusCare - Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+      .login-card{max-width:420px;margin:6rem auto;padding:2rem;background:#fff;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.08)}
+      .form-input{width:100%;padding:.75rem;border:1px solid #ddd;border-radius:6px;margin-bottom:1rem}
+      .btn-primary{background:#4CAF50;color:#fff;padding:.6rem 1.2rem;border-radius:6px;border:none;cursor:pointer}
+    </style>
+  </head>
+  <body>
+    <div class="login-card">
+      <h2>CampusCare — Login</h2>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      <form method="POST" action="{{ url_for('login') }}">
+        <label>Username or email</label>
+        <input class="form-input" type="text" name="username" required>
+        <label>Password</label>
+        <input class="form-input" type="password" name="password" required>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn-primary" type="submit">Login</button>
+          <a href="{{ url_for('home') }}" class="btn btn-secondary" style="padding:.6rem 1rem;border-radius:6px;text-decoration:none">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </body>
+</html>
+"""
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Simple login page (minimal)"""
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = None
+        if username and '@' in username:
+            user = User.query.filter_by(email=username).first()
+        else:
+            user = User.query.filter_by(username=username).first()
+
+        if user and user.check_password(password):
+            login_user(user)
+            flash('Logged in successfully', 'success')
+            next_page = request.args.get('next') or url_for('dashboard')
+            return redirect(next_page)
+        else:
+            flash('Invalid credentials', 'error')
+            return render_template_string(LOGIN_PAGE)
+    return render_template_string(LOGIN_PAGE)
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('Logged out', 'success')
+    return redirect(url_for('home'))
 
 # ========== TEMPLATE FILTERS ==========
 @app.template_filter('format_date')
@@ -279,16 +451,29 @@ def get_priority_color(priority):
 
 # ========== APPLICATION SETUP ==========
 def setup_database():
-    """Initialize database with minimal sample data"""
+    """Initialize database with minimal sample data and seed users"""
     with app.app_context():
         db.create_all()
         print("✅ Database tables created")
-        
+
+        # Seed sample issues if none
         if Issue.query.count() == 0:
             add_sample_data()
-            print("✅ Added 5 sample issues")
+
+        # Seed an admin and some staff if no users
+        if User.query.count() == 0:
+            admin = User(username='admin', email='admin@campus.local', role='admin')
+            admin.set_password('adminpass')
+            staff1 = User(username='maintenance1', email='maintenance1@campus.local', role='maintenance')
+            staff1.set_password('staffpass')
+            staff2 = User(username='staff1', email='staff1@campus.local', role='staff')
+            staff2.set_password('staffpass')
+            db.session.add_all([admin, staff1, staff2])
+            db.session.commit()
+            print("✅ Seeded admin and staff users (admin/adminpass).")
+
         else:
-            print(f"✅ Database has {Issue.query.count()} issues")
+            print(f"✅ Database has {User.query.count()} users and {Issue.query.count()} issues")
 
 # ========== RUN APPLICATION ==========
 if __name__ == '__main__':
