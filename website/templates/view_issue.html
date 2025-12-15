@@ -108,6 +108,55 @@
     </form>
 </div>
 
+{% if issue.status == 'Resolved' %}
+<div class="issue-rating">
+  <h3><i class="fas fa-star"></i> Satisfaction Rating</h3>
+
+  {% if avg_rating %}
+    <div class="avg-stars">
+      {% for i in range(1, 6) %}
+        {% if i <= avg_rating|round(0, 'floor') %}
+          ★
+        {% else %}
+          ☆
+        {% endif %}
+      {% endfor %}
+    </div>
+    <p>{{ avg_rating }}/5 ({{ rating_count }} ratings)</p>
+  {% endif %}
+
+  <form method="POST" action="{{ url_for('rate_issue', issue_id=issue.id) }}">
+    <label>Rate the solution:</label><br>
+
+    <!-- ⭐ Star input -->
+    <div class="star-rating">
+      <input type="radio" id="star5" name="rating" value="5" required>
+      <label for="star5">★</label>
+      <input type="radio" id="star4" name="rating" value="4">
+      <label for="star4">★</label>
+      <input type="radio" id="star3" name="rating" value="3">
+      <label for="star3">★</label>
+      <input type="radio" id="star2" name="rating" value="2">
+      <label for="star2">★</label>
+      <input type="radio" id="star1" name="rating" value="1">
+      <label for="star1">★</label>
+    </div>
+
+    <div class="form-group">
+      <textarea name="feedback" rows="3"
+                class="form-textarea"
+                placeholder="Optional feedback"></textarea>
+    </div>
+
+    <div class="rating-actions">
+    <button type="submit" class="btn btn-primary btn-sm">
+        Submit
+    </button>
+</div>
+  </form>
+</div>
+{% endif %}
+
     
     <div class="issue-actions">
         <a href="{{ url_for('issues_list') }}" class="btn btn-secondary">

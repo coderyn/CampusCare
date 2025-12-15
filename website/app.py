@@ -80,7 +80,6 @@ class Issue(db.Model):
     status = db.Column(db.String(20), default='Open')
     priority = db.Column(db.String(20), default='Medium')
     image_filename = db.Column(db.String(255), nullable=True)
-    comments = db.relationship('Comment', backref='issue', lazy=True)
     
 
     # Foreign keys
@@ -90,7 +89,10 @@ class Issue(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
+    
+    comments = db.relationship('Comment', backref='issue', lazy=True)
+    ratings = db.relationship('Rating', backref='issue', lazy=True)
+    
     def __repr__(self):
         return f'<Issue {self.title}>'
 
@@ -111,6 +113,17 @@ class Comment(db.Model):
 
     def __repr__(self):
         return f'<Comment {self.id} on Issue {self.issue_id}>'
+    
+class Rating(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    issue_id = db.Column(db.Integer, db.ForeignKey('issue.id'), nullable=False)
+
+    score = db.Column(db.Integer, nullable=False)  # 1..5
+    feedback = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # to limit 1 rating per browser session (simple “user”)
+    rater_token = db.Column(db.String(64), nullable=False)
 
 # ========== HELPER FUNCTIONS ==========
 def get_category_stats():
@@ -354,10 +367,24 @@ def view_issue(issue_id):
         my_tokens = session.get('my_comment_tokens', [])
         my_tokens.append(token)
         session['my_comment_tokens'] = my_tokens
+        
+        avg_rating = db.session.query(func.avg(Rating.score)).filter(Rating.issue_id == issue.id).scalar()
+        rating_count = Rating.query.filter_by(issue_id=issue.id).count()
 
         return redirect(url_for('view_issue', issue_id=issue.id))
+    
+    avg_rating = None
+    rating_count = 0
+    
+    if issue.status == 'Resolved':
+        avg_rating = db.session.query(func.avg(Rating.score))\
+            .filter(Rating.issue_id == issue.id)\
+            .scalar()
+        avg_rating = round(avg_rating, 1) if avg_rating else None
 
-    return render_template('view_issue.html', issue=issue)
+        rating_count = Rating.query.filter_by(issue_id=issue.id).count()
+
+    return render_template('view_issue.html', issue=issue, avg_rating=avg_rating, rating_count=rating_count)
 
 # ========== ADMIN ROUTES ==========
 @app.route('/admin/issues')
@@ -529,6 +556,52 @@ def edit_comment(comment_id):
         return redirect(url_for('view_issue', issue_id=comment.issue_id))
 
     return render_template('edit_comment.html', comment=comment)
+
+
+@app.route('/issue/<int:issue_id>/rate', methods=['POST'])
+def rate_issue(issue_id):
+    issue = Issue.query.get_or_404(issue_id)
+
+    if issue.status != 'Resolved':
+        flash('You can only rate after the issue is resolved.', 'error')
+        return redirect(url_for('view_issue', issue_id=issue.id))
+
+    # rating value
+    rating_raw = request.form.get('rating')
+    feedback = request.form.get('feedback', '').strip()
+
+    try:
+        score = int(rating_raw)
+    except (TypeError, ValueError):
+        flash('Invalid rating.', 'error')
+        return redirect(url_for('view_issue', issue_id=issue.id))
+
+    if score < 1 or score > 5:
+        flash('Rating must be between 1 and 5.', 'error')
+        return redirect(url_for('view_issue', issue_id=issue.id))
+
+    # get/create token for this browser
+    if 'rater_token' not in session:
+        session['rater_token'] = secrets.token_hex(16)
+    token = session['rater_token']
+
+    # prevent same browser rating the same issue multiple times
+    existing = Rating.query.filter_by(issue_id=issue.id, rater_token=token).first()
+    if existing:
+        flash('You already rated this issue (in this browser).', 'error')
+        return redirect(url_for('view_issue', issue_id=issue.id))
+
+    new_rating = Rating(
+        issue_id=issue.id,
+        score=score,
+        feedback=feedback if feedback else None,
+        rater_token=token
+    )
+    db.session.add(new_rating)
+    db.session.commit()
+
+    flash('Thanks! Your rating was submitted.', 'success')
+    return redirect(url_for('view_issue', issue_id=issue.id))
 
 
 # ========== TEMPLATE FILTERS ==========
