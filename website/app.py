@@ -314,7 +314,7 @@ def delete_comment(comment_id):
 
     my_tokens = session.get('my_comment_tokens', [])
     if comment.edit_token not in my_tokens:
-        flash("You can only delete your own comment (same browser).", "error")
+        flash("You can only delete your own comment.", "error")
         return redirect(url_for('view_issue', issue_id=comment.issue_id))
 
     db.session.delete(comment)
@@ -328,7 +328,7 @@ def edit_comment(comment_id):
 
     my_tokens = session.get('my_comment_tokens', [])
     if comment.edit_token not in my_tokens:
-        flash("You can only edit your own comment (same browser).", "error")
+        flash("You can only edit your own comment.", "error")
         return redirect(url_for('view_issue', issue_id=comment.issue_id))
 
     if request.method == 'POST':
