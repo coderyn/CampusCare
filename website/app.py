@@ -7,12 +7,19 @@ from functools import wraps
 # Authentication
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+from flask import session
+import os
+import secrets
+
 
 # Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'campuscare-secret-key-2024'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static', 'uploads')
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024   # 5 MB (optional)
 
 # Initialize database
 db = SQLAlchemy(app)
@@ -72,6 +79,9 @@ class Issue(db.Model):
     media_url = db.Column(db.String(200))  # For uploaded images/videos
     status = db.Column(db.String(20), default='Open')
     priority = db.Column(db.String(20), default='Medium')
+    image_filename = db.Column(db.String(255), nullable=True)
+    comments = db.relationship('Comment', backref='issue', lazy=True)
+    
 
     # Foreign keys
     reported_by = db.Column(db.Integer, db.ForeignKey('user.id'))
@@ -83,6 +93,24 @@ class Issue(db.Model):
 
     def __repr__(self):
         return f'<Issue {self.title}>'
+
+#database for comment
+class Comment(db.Model):
+    """Model for issue comments (shared platform discussion)"""
+    id = db.Column(db.Integer, primary_key=True)
+    
+    issue_id = db.Column(
+        db.Integer,
+        db.ForeignKey('issue.id'),
+        nullable=False
+    )
+
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    edit_token = db.Column(db.String(64), nullable=False)
+
+    def __repr__(self):
+        return f'<Comment {self.id} on Issue {self.issue_id}>'
 
 # ========== HELPER FUNCTIONS ==========
 def get_category_stats():
@@ -246,6 +274,15 @@ def issues_list():
                          category_filter=category,
                          status_filter=status)
 
+    
+    return render_template('issue.html',
+                           issues=issues,
+                           categories=categories,
+                           statuses=statuses,
+                           search=search,
+                           category_filter=category,
+                           status_filter=status)
+
 @app.route('/issue/new', methods=['GET', 'POST'])
 def new_issue():
     """Report new issue (with media upload placeholder)"""
@@ -260,14 +297,27 @@ def new_issue():
             flash('Please fill all required fields', 'error')
             return redirect(url_for('new_issue'))
 
+        
+        # uploaded image
+        image_file = request.files.get('image')
+        image_filename = None
+
+        if image_file and image_file.filename != '':
+            filename = secure_filename(image_file.filename)
+            save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            image_file.save(save_path)
+            image_filename = filename
+        
         issue = Issue(
             title=title,
             description=description,
             category=category,
             location=location,
             priority=priority,
-            status='Open'
+            status='Open',
+            image_filename=image_filename
         )
+        
 
         db.session.add(issue)
         db.session.commit()
@@ -283,10 +333,30 @@ def new_issue():
                          categories=categories,
                          priorities=priorities)
 
-@app.route('/issue/<int:issue_id>')
+@app.route('/issue/<int:issue_id>', methods=['GET', 'POST'])
 def view_issue(issue_id):
     """View specific issue details"""
     issue = Issue.query.get_or_404(issue_id)
+    
+    if request.method == 'POST':
+        token = secrets.token_hex(16)  # random secret token
+        comment_text = request.form.get('comment')
+        new_comment = Comment(
+            issue_id=issue.id,
+            content=comment_text.strip(),
+            edit_token=token
+            )
+        
+        db.session.add(new_comment)
+        db.session.commit()
+        
+        # store token in this user's browser session so they can edit/delete later
+        my_tokens = session.get('my_comment_tokens', [])
+        my_tokens.append(token)
+        session['my_comment_tokens'] = my_tokens
+
+        return redirect(url_for('view_issue', issue_id=issue.id))
+
     return render_template('view_issue.html', issue=issue)
 
 # ========== ADMIN ROUTES ==========
@@ -422,6 +492,44 @@ def logout():
     logout_user()
     flash('Logged out', 'success')
     return redirect(url_for('home'))
+
+@app.route('/comment/<int:comment_id>/delete', methods=['POST'])
+def delete_comment(comment_id):
+    comment = Comment.query.get_or_404(comment_id)
+
+    my_tokens = session.get('my_comment_tokens', [])
+    if comment.edit_token not in my_tokens:
+        flash("You can only delete your own comment.", "error")
+        return redirect(url_for('view_issue', issue_id=comment.issue_id))
+
+    db.session.delete(comment)
+    db.session.commit()
+    flash("Comment deleted.", "success")
+    return redirect(url_for('view_issue', issue_id=comment.issue_id))
+
+@app.route('/comment/<int:comment_id>/edit', methods=['GET', 'POST'])
+def edit_comment(comment_id):
+    comment = Comment.query.get_or_404(comment_id)
+
+    my_tokens = session.get('my_comment_tokens', [])
+    if comment.edit_token not in my_tokens:
+        flash("You can only edit your own comment.", "error")
+        return redirect(url_for('view_issue', issue_id=comment.issue_id))
+
+    if request.method == 'POST':
+        new_text = request.form.get('content', '').strip()
+        if not new_text:
+            flash("Comment cannot be empty.", "error")
+            return redirect(url_for('edit_comment', comment_id=comment.id))
+
+        comment.content = new_text
+        comment.updated_at = datetime.utcnow()
+        db.session.commit()
+        flash("Comment updated.", "success")
+        return redirect(url_for('view_issue', issue_id=comment.issue_id))
+
+    return render_template('edit_comment.html', comment=comment)
+
 
 # ========== TEMPLATE FILTERS ==========
 @app.template_filter('format_date')

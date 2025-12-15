@@ -42,6 +42,72 @@
         <h3><i class="fas fa-file-alt"></i> Description</h3>
         <p>{{ issue.description }}</p>
     </div>
+
+    {% if issue.image_filename %}
+    <div class="issue-image">
+    <h3><i class="fas fa-image"></i> Attached Image</h3>
+    <img src="{{ url_for('static', filename='uploads/' ~ issue.image_filename) }}"
+         alt="Issue Image"
+         class="issue-img">
+    </div>
+    {% endif %}
+
+    <!-- comments section -->
+<div class="issue-comments">
+    <h3><i class="fas fa-comments"></i> Comments</h3>
+
+    {% set my_tokens = session.get('my_comment_tokens', []) %}
+
+    {% if issue.comments %}
+        <ul class="comment-list">
+            {% for comment in issue.comments %}
+                <li class="comment-item">
+    <div class="comment-header">
+        <span class="comment-text">{{ comment.content }}</span>
+
+        {% if comment.edit_token in my_tokens %}
+        <div class="comment-actions">
+            <span class="dots">⋮</span>
+
+            <div class="dropdown-menu">
+                <a href="{{ url_for('edit_comment', comment_id=comment.id) }}"> Edit</a>
+
+                <form action="{{ url_for('delete_comment', comment_id=comment.id) }}"
+                      method="POST">
+                    <button type="submit"
+                            onclick="return confirm('Delete this comment?')">
+                         Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No comments yet. Be the first to comment!</p>
+    {% endif %}
+
+    <!-- Comment form stays below -->
+    <form method="POST" class="comment-form">
+        <div class="form-group">
+            <label for="comment">
+                <i class="fas fa-comment-dots"></i> Add a comment
+            </label>
+            <textarea id="comment" name="comment" rows="3"
+                      class="form-textarea"
+                      placeholder="Write your comment here..."
+                      required></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fas fa-paper-plane"></i> Post Comment
+        </button>
+    </form>
+</div>
+
     
     <div class="issue-actions">
         <a href="{{ url_for('issues_list') }}" class="btn btn-secondary">

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Edit Comment{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h2>Edit Comment</h2>
+
+  <form method="POST">
+    <div class="form-group">
+      <textarea name="content" rows="4" class="form-textarea" required>{{ comment.content }}</textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-sm">Save</button>
+    <a href="{{ url_for('view_issue', issue_id=comment.issue_id) }}" class="btn btn-secondary btn-sm">Cancel</a>
+  </form>
+</div>
+{% endblock %}
