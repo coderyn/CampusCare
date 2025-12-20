@@ -224,6 +224,8 @@ def home():
                          category_stats=category_stats)
 
 @app.route('/dashboard')
+@login_required
+@role_required('admin')
 def dashboard():
     """Analytics dashboard"""
     total_issues = Issue.query.count()
