@@ -23,6 +23,8 @@ app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024   # 5 MB (optional)
 
 # Initialize database
 db = SQLAlchemy(app)
+from website.auth import auth_bp
+app.register_blueprint(auth_bp)
 
 # Flask-Login setup
 login_manager = LoginManager()
@@ -655,6 +657,9 @@ def setup_database():
 
         else:
             print(f"✅ Database has {User.query.count()} users and {Issue.query.count()} issues")
+
+from website.auth import auth_bp
+app.register_blueprint(auth_bp)
 
 # ========== RUN APPLICATION ==========
 if __name__ == '__main__':
