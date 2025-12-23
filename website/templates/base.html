@@ -41,6 +41,15 @@
                     </a>
                 </li>
 
+                <!-- ADMIN LINK - ADD THIS SECTION -->
+                {% if current_user.is_authenticated and current_user.is_admin() %}
+                <li>
+                    <a href="{{ url_for('admin_issues') }}" {% if request.endpoint == 'admin_issues' %}class="active"{% endif %}>
+                        <i class="fas fa-tools"></i> Admin
+                    </a>
+                </li>
+                {% endif %}
+
                 <!-- AUTH LINKS -->
                 {% if current_user.is_authenticated %}
                     {% if current_user.role == 'student' %}

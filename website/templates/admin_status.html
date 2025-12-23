@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block title %}Change Issue Status{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2><i class="fas fa-edit"></i> Manage Issue #{{ issue.id }}</h2>
+        <a href="{{ url_for('admin_issues') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Issues
+        </a>
+    </div>
+    
+    <div class="issue-details">
+        <h3>{{ issue.title }}</h3>
+        <p><strong>Description:</strong> {{ issue.description }}</p>
+        <p><strong>Category:</strong> {{ issue.category }}</p>
+        <p><strong>Location:</strong> {{ issue.location }}</p>
+        <p><strong>Reported:</strong> {{ issue.created_at|format_date }}</p>
+        <p><strong>Priority:</strong> 
+            <span class="priority-badge {{ issue.priority|get_priority_color }}">
+                {{ issue.priority }}
+            </span>
+        </p>
+    </div>
+    
+    <hr>
+    
+    <div class="form-container">
+        <h3><i class="fas fa-sync-alt"></i> Update Status</h3>
+        
+        <form method="POST" action="{{ url_for('admin_change_status', issue_id=issue.id) }}">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="status">Status:</label>
+                    <select name="status" id="status" class="form-select" required>
+                        <option value="Open" {% if issue.status == 'Open' %}selected{% endif %}>
+                            Open
+                        </option>
+                        <option value="In Progress" {% if issue.status == 'In Progress' %}selected{% endif %}>
+                            In Progress
+                        </option>
+                        <option value="Resolved" {% if issue.status == 'Resolved' %}selected{% endif %}>
+                            Resolved
+                        </option>
+                        <option value="Closed" {% if issue.status == 'Closed' %}selected{% endif %}>
+                            Closed
+                        </option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="priority">Priority:</label>
+                    <select name="priority" id="priority" class="form-select">
+                        <option value="Low" {% if issue.priority == 'Low' %}selected{% endif %}>
+                            Low
+                        </option>
+                        <option value="Medium" {% if issue.priority == 'Medium' %}selected{% endif %}>
+                            Medium
+                        </option>
+                        <option value="High" {% if issue.priority == 'High' %}selected{% endif %}>
+                            High
+                        </option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="assigned_to">Assign To:</label>
+                    <select name="assigned_to" id="assigned_to" class="form-select">
+                        <option value="">Unassigned</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}" {% if issue.assigned_to == user.id %}selected{% endif %}>
+                            {{ user.username }} ({{ user.role }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="notes">Update Notes:</label>
+                <textarea name="notes" id="notes" class="form-textarea" 
+                          rows="3" placeholder="Add notes about this status change..."></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Update Status
+                </button>
+                <a href="{{ url_for('view_issue', issue_id=issue.id) }}" class="btn btn-secondary">
+                    <i class="fas fa-eye"></i> View Issue
+                </a>
+            </div>
+        </form>
+    </div>
+    
+    {% if status_history %}
+    <hr>
+    
+    <div class="status-history">
+        <h3><i class="fas fa-history"></i> Status History</h3>
+        
+        <div class="timeline">
+            {% for history in status_history %}
+            <div class="timeline-item">
+                <div class="timeline-marker {{ history.new_status|get_status_color }}"></div>
+                <div class="timeline-content">
+                    <div class="timeline-header">
+                        <strong>{{ history.new_status }}</strong>
+                        <span class="timeline-date">{{ history.changed_at|format_date }}</span>
+                    </div>
+                    <div class="timeline-body">
+                        {% if history.old_status %}
+                        <p>Changed from <strong>{{ history.old_status }}</strong> to <strong>{{ history.new_status }}</strong></p>
+                        {% else %}
+                        <p>Status set to <strong>{{ history.new_status }}</strong></p>
+                        {% endif %}
+                        {% if history.changed_by %}
+                        <p><small>Changed by: {{ history.changed_by }}</small></p>
+                        {% endif %}
+                        {% if history.notes %}
+                        <p class="notes">{{ history.notes }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}

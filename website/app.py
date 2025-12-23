@@ -68,6 +68,19 @@ class User(db.Model, UserMixin):
 
     def is_admin(self):
         return self.role == 'admin'
+    
+class IssueStatusHistory(db.Model):
+    """Model for tracking issue status changes"""
+    id = db.Column(db.Integer, primary_key=True)
+    issue_id = db.Column(db.Integer, db.ForeignKey('issue.id'), nullable=False)
+    old_status = db.Column(db.String(20))
+    new_status = db.Column(db.String(20), nullable=False)
+    changed_by = db.Column(db.String(100))  # Could be user_id or session token
+    changed_at = db.Column(db.DateTime, default=datetime.utcnow)
+    notes = db.Column(db.Text)
+
+    def __repr__(self):
+        return f'<StatusChange {self.old_status}->{self.new_status} for Issue {self.issue_id}>'
 
 class Issue(db.Model):
     """Model for storing campus issues"""
@@ -80,7 +93,11 @@ class Issue(db.Model):
     status = db.Column(db.String(20), default='Open')
     priority = db.Column(db.String(20), default='Medium')
     image_filename = db.Column(db.String(255), nullable=True)
-    
+
+    status_history = db.relationship('IssueStatusHistory', 
+                                     backref='issue', 
+                                     lazy=True,
+                                     order_by='IssueStatusHistory.changed_at.desc()')
 
     # Foreign keys
     reported_by = db.Column(db.Integer, db.ForeignKey('user.id'))
@@ -225,7 +242,7 @@ def home():
 
 @app.route('/dashboard')
 def dashboard():
-    """Analytics dashboard"""
+    """Analytics dashboard with admin features"""
     total_issues = Issue.query.count()
     open_issues = Issue.query.filter_by(status='Open').count()
     in_progress_issues = Issue.query.filter_by(status='In Progress').count()
@@ -233,11 +250,14 @@ def dashboard():
 
     category_stats = get_category_stats()
     status_stats = get_status_stats()
-    recent_issues = get_recent_issues(10)
+    recent_issues = Issue.query.order_by(Issue.created_at.desc()).limit(10).all()
 
     # Calculate percentages
     open_percentage = round((open_issues / total_issues * 100), 1) if total_issues > 0 else 0
     resolved_percentage = round((resolved_issues / total_issues * 100), 1) if total_issues > 0 else 0
+
+    # Check if user is admin
+    """is_admin = current_user.is_admin()"""
 
     return render_template('dashboard.html',
                          total_issues=total_issues,
@@ -249,6 +269,132 @@ def dashboard():
                          category_stats=category_stats,
                          status_stats=status_stats,
                          recent_issues=recent_issues)
+
+@app.route('/update-status/<int:issue_id>', methods=['POST'])
+def update_status(issue_id):
+    """Update issue status (admin only)"""
+    """if not current_user.is_admin():
+        abort(403)"""
+    
+    issue = Issue.query.get_or_404(issue_id)
+    new_status = request.form.get('status')
+    
+    if new_status and new_status in ['Open', 'In Progress', 'Resolved', 'Closed']:
+        old_status = issue.status
+        issue.status = new_status
+        issue.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        flash(f'Issue #{issue.id} status changed from {old_status} to {new_status}', 'success')
+    
+    return redirect(url_for('dashboard'))
+
+# Rename the admin routes to avoid conflicts
+@app.route('/admin/issue-manager')
+def admin_issue_manager():
+    """Admin view of all issues with management options"""
+    """if not current_user.is_admin():
+        abort(403)"""
+    
+    search = request.args.get('search', '')
+    category = request.args.get('category', '')
+    status = request.args.get('status', '')
+    
+    query = Issue.query
+    
+    if search:
+        query = query.filter(
+            (Issue.title.ilike(f'%{search}%')) |
+            (Issue.description.ilike(f'%{search}%'))
+        )
+    
+    if category:
+        query = query.filter(Issue.category == category)
+    
+    if status:
+        query = query.filter(Issue.status == status)
+    
+    issues = query.order_by(Issue.created_at.desc()).all()
+    
+    categories = db.session.query(Issue.category).distinct().all()
+    categories = [c[0] for c in categories]
+    
+    statuses = db.session.query(Issue.status).distinct().all()
+    statuses = [s[0] for s in statuses]
+    
+    return render_template('admin_issues.html',
+                         issues=issues,
+                         categories=categories,
+                         statuses=statuses,
+                         search=search,
+                         category_filter=category,
+                         status_filter=status)
+
+@app.route('/admin/issue/<int:issue_id>/status', methods=['GET', 'POST'])
+def admin_change_issue_status(issue_id):
+    """Admin page to change issue status"""
+    # Check if user is admin
+    """if not current_user.is_admin():
+        abort(403)"""
+    
+    issue = Issue.query.get_or_404(issue_id)
+    
+    if request.method == 'POST':
+        new_status = request.form.get('status')
+        priority = request.form.get('priority')
+        notes = request.form.get('notes')
+        assigned_to = request.form.get('assigned_to')
+        
+        # Track old status for history
+        old_status = issue.status
+        
+        # Update issue
+        if new_status:
+            issue.status = new_status
+        if priority:
+            issue.priority = priority
+        if assigned_to:
+            try:
+                issue.assigned_to = int(assigned_to) if assigned_to else None
+            except ValueError:
+                issue.assigned_to = None
+        
+        issue.updated_at = datetime.utcnow()
+        
+        try:
+            if new_status and new_status != old_status:
+                status_history = IssueStatusHistory(
+                    issue_id=issue.id,
+                    old_status=old_status,
+                    new_status=new_status,
+                    changed_by=f"User {current_user.id} ({current_user.username})",
+                    notes=notes
+                )
+                db.session.add(status_history)
+        except Exception as e:
+            print(f"Note: Status history not saved: {e}")
+            # Continue without history if table doesn't exist
+        
+        db.session.commit()
+        
+        flash(f'Issue #{issue.id} status updated to {new_status}', 'success')
+        return redirect(url_for('admin_change_issue_status', issue_id=issue_id))
+    
+    # Get available users for assignment
+    users = User.query.all()
+    
+    # Get status history (if table exists)
+    status_history = []
+    try:
+        status_history = IssueStatusHistory.query.filter_by(issue_id=issue_id)\
+            .order_by(IssueStatusHistory.changed_at.desc()).all()
+    except Exception as e:
+        print(f"Note: Could not fetch status history: {e}")
+    
+    return render_template('admin_status.html',
+                         issue=issue,
+                         users=users,
+                         status_history=status_history)
 
 @app.route('/issues')
 def issues_list():
@@ -286,15 +432,6 @@ def issues_list():
                          search=search,
                          category_filter=category,
                          status_filter=status)
-
-    
-    return render_template('issue.html',
-                           issues=issues,
-                           categories=categories,
-                           statuses=statuses,
-                           search=search,
-                           category_filter=category,
-                           status_filter=status)
 
 @app.route('/issue/new', methods=['GET', 'POST'])
 def new_issue():
