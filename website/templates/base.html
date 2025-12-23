@@ -15,19 +15,60 @@
                 <i class="fas fa-university"></i>
                 <h1>CampusCare</h1>
             </div>
+
             <ul class="nav-menu">
-                <li><a href="{{ url_for('home') }}" {% if request.endpoint == 'home' %}class="active"{% endif %}>
-                    <i class="fas fa-home"></i> Home
-                </a></li>
-                <li><a href="{{ url_for('dashboard') }}" {% if request.endpoint == 'dashboard' %}class="active"{% endif %}>
-                    <i class="fas fa-chart-bar"></i> Dashboard
-                </a></li>
-                <li><a href="{{ url_for('issues_list') }}" {% if request.endpoint == 'issues_list' %}class="active"{% endif %}>
-                    <i class="fas fa-list"></i> Issues
-                </a></li>
-                <li><a href="{{ url_for('new_issue') }}" {% if request.endpoint == 'new_issue' %}class="active"{% endif %}>
-                    <i class="fas fa-plus-circle"></i> Report Issue
-                </a></li>
+                <li>
+                    <a href="{{ url_for('home') }}" {% if request.endpoint == 'home' %}class="active"{% endif %}>
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                </li>
+
+                {% if current_user.is_authenticated and current_user.role == 'admin' %}
+                <li>
+                    <a href="{{ url_for('dashboard') }}" {% if request.endpoint == 'dashboard' %}class="active"{% endif %}>
+                        <i class="fas fa-chart-bar"></i> Dashboard
+                    </a>
+                </li>
+                {% endif %}
+
+                <li>
+                    <a href="{{ url_for('issues_list') }}" {% if request.endpoint == 'issues_list' %}class="active"{% endif %}>
+                        <i class="fas fa-list"></i> Issues
+                    </a>
+                </li>
+
+                <li>
+                    <a href="{{ url_for('new_issue') }}" {% if request.endpoint == 'new_issue' %}class="active"{% endif %}>
+                        <i class="fas fa-plus-circle"></i> Report Issue
+                    </a>
+                </li>
+
+                <!-- AUTH LINKS -->
+                {% if current_user.is_authenticated %}
+                    {% if current_user.role == 'student' %}
+                    <li>
+                        <a href="{{ url_for('profile') }}" {% if request.endpoint == 'profile' %}class="active"{% endif %}>
+                            <i class="fas fa-user"></i> Profile
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li>
+                        <a href="{{ url_for('logout') }}">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </li>
+                {% else %}
+                    <li>
+                        <a href="{{ url_for('login') }}" {% if request.endpoint == 'login' %}class="active"{% endif %}>
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('register') }}" {% if request.endpoint == 'register' %}class="active"{% endif %}>
+                            <i class="fas fa-user-plus"></i> Register
+                        </a>
+                    </li>
+                {% endif %}
             </ul>
         </div>
     </nav>
