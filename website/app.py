@@ -224,6 +224,8 @@ def home():
                          category_stats=category_stats)
 
 @app.route('/dashboard')
+@login_required
+@role_required('admin')
 def dashboard():
     """Analytics dashboard"""
     total_issues = Issue.query.count()
@@ -655,6 +657,70 @@ def setup_database():
 
         else:
             print(f"✅ Database has {User.query.count()} users and {Issue.query.count()} issues")
+
+#=========== Student Registration =========
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        confirm = request.form.get('confirm_password', '')
+
+        if not all([username, email, password, confirm]):
+            flash('Please fill all required fields.', 'error')
+            return redirect(url_for('register'))
+
+        if password != confirm:
+            flash('Passwords do not match.', 'error')
+            return redirect(url_for('register'))
+
+        if User.query.filter_by(email=email).first():
+            flash('Email already registered.', 'error')
+            return redirect(url_for('register'))
+
+        if User.query.filter_by(username=username).first():
+            flash('Username already taken.', 'error')
+            return redirect(url_for('register'))
+
+        user = User(username=username, email=email, role='student')
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+
+        flash('Account created! Please login.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('register.html')
+
+#========== Student Profile ==========
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    if current_user.role != 'student':
+        flash('Only students can access profile.', 'error')
+        return redirect(url_for('home'))
+
+    if request.method == 'POST':
+        new_username = request.form.get('username', '').strip()
+        if not new_username:
+            flash('Username cannot be empty.', 'error')
+            return redirect(url_for('profile'))
+
+        existing = User.query.filter_by(username=new_username).first()
+        if existing and existing.id != current_user.id:
+            flash('Username already taken.', 'error')
+            return redirect(url_for('profile'))
+
+        current_user.username = new_username
+        db.session.commit()
+        flash('Profile updated.', 'success')
+        return redirect(url_for('profile'))
+
+    return render_template('profile.html')
 
 # ========== RUN APPLICATION ==========
 if __name__ == '__main__':
