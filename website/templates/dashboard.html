@@ -20,8 +20,8 @@
     </div>
     
     <div class="stat-card">
-        <div class="stat-icon status-open">
-            <i class="fas fa-clock"></i>
+        <div class="stat-icon">
+            <i class="fas fa-clock open-icon"></i>
         </div>
         <div class="stat-info">
             <h3>Open</h3>
@@ -30,8 +30,8 @@
     </div>
     
     <div class="stat-card">
-        <div class="stat-icon status-in-progress">
-            <i class="fas fa-tools"></i>
+        <div class="stat-icon">
+            <i class="fas fa-tools in-progress-icon"></i>
         </div>
         <div class="stat-info">
             <h3>In Progress</h3>
@@ -40,8 +40,8 @@
     </div>
     
     <div class="stat-card">
-        <div class="stat-icon status-resolved">
-            <i class="fas fa-check-circle"></i>
+        <div class="stat-icon">
+            <i class="fas fa-check-circle resolved-icon"></i>
         </div>
         <div class="stat-info">
             <h3>Resolved</h3>
@@ -65,16 +65,16 @@
             </thead>
             <tbody>
                 {% for category, count in category_stats %}
+                {% set percentage = (count / total_issues * 100)|round(1) if total_issues > 0 else 0 %}
                 <tr>
                     <td>{{ category }}</td>
                     <td><strong>{{ count }}</strong></td>
                     <td>
-                        {% set percentage = (count / total_issues * 100)|round(1) if total_issues > 0 else 0 %}
                         <div class="progress-container">
                             <div class="progress-bar">
-                                <div class="progress-fill" data-width="{{ percentage }}"></div>
-                                <span class="progress-label">{{ percentage }}%</span>
+                                <div class="progress-fill" style="width: {{ percentage }}%;"></div>
                             </div>
+                            <span class="progress-label">{{ percentage }}%</span>
                         </div>
                     </td>
                 </tr>
@@ -105,4 +105,103 @@
     <p class="no-data">No status data available</p>
     {% endif %}
 </div>
+
+<style>
+/* Icon colors */
+.open-icon {
+    color: #dc3545; /* Red for Open */
+}
+
+.in-progress-icon {
+    color: #ffc107; /* Yellow for In Progress */
+}
+
+.resolved-icon {
+    color: #17a2b8; /* Teal for Resolved */
+}
+
+/* Progress Bar Styles */
+.progress-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.progress-bar {
+    flex-grow: 1;
+    height: 20px;
+    background-color: #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: #4e73df;
+    border-radius: 10px;
+    min-width: 0;
+    transition: width 0.3s ease;
+}
+
+.progress-label {
+    min-width: 50px;
+    text-align: right;
+    font-size: 14px;
+    font-weight: 600;
+    color: #5a5c69;
+}
+
+/* Status card colors */
+.status-open {
+    background-color: #f8d7da;
+    border-left: 4px solid #dc3545;
+}
+
+.status-in-progress {
+    background-color: #fff3cd;
+    border-left: 4px solid #ffc107;
+}
+
+.status-resolved {
+    background-color: #d1ecf1;
+    border-left: 4px solid #17a2b8;
+}
+
+.status-unknown {
+    background-color: #e2e3e5;
+    border-left: 4px solid #6c757d;
+}
+
+/* Status grid layout */
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.status-card {
+    padding: 15px;
+    border-radius: 8px;
+    transition: transform 0.2s;
+}
+
+.status-card:hover {
+    transform: translateY(-2px);
+}
+
+.status-info h4 {
+    margin: 0 0 5px 0;
+    color: #495057;
+    font-size: 16px;
+}
+
+.status-count {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #343a40;
+}
+</style>
 {% endblock %}
