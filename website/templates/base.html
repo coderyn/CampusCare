@@ -36,9 +36,11 @@
                 </li>
 
                 <li>
+                    {% if current_user.is_authenticated %}
                     <a href="{{ url_for('new_issue') }}" {% if request.endpoint == 'new_issue' %}class="active"{% endif %}>
                         <i class="fas fa-plus-circle"></i> Report Issue
                     </a>
+                    {% endif %}
                 </li>
 
                 <!-- ADMIN LINK - ADD THIS SECTION -->

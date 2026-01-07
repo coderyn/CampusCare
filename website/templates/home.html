@@ -8,9 +8,15 @@
         <h1>Welcome to CampusCare</h1>
         <p class="hero-subtitle">Your campus issue reporting and management system</p>
         <div class="hero-buttons">
-            <a href="{{ url_for('new_issue') }}" class="btn btn-primary btn-large">
-                <i class="fas fa-plus-circle"></i> Report an Issue
-            </a>
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('new_issue') }}" class="btn btn-primary btn-large">
+                    <i class="fas fa-plus-circle"></i> Report an Issue
+                </a>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="btn btn-primary btn-large">
+                    <i class="fas fa-sign-in-alt"></i> Login to Report Issue
+                </a>
+            {% endif %}
             <a href="{{ url_for('issues_list') }}" class="btn btn-secondary btn-large">
                 <i class="fas fa-list"></i> View All Issues
             </a>
