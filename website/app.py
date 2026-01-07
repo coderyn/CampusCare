@@ -368,6 +368,11 @@ def view_issue(issue_id):
     
     if request.method == 'POST':
         token = secrets.token_hex(16)  # random secret token
+        
+        if not current_user.is_authenticated:
+            flash('Please log in to comment.', 'error')
+            return redirect(url_for('login'))
+    
         comment_text = request.form.get('comment')
         new_comment = Comment(
             issue_id=issue.id,

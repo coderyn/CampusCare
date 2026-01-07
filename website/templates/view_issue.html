@@ -96,6 +96,7 @@
     {% endif %}
 
     <!-- Comment form stays below -->
+     {% if current_user.is_authenticated %}
     <form method="POST" class="comment-form">
         <div class="form-group">
             <label for="comment">
@@ -111,6 +112,12 @@
             <i class="fas fa-paper-plane"></i> Post Comment
         </button>
     </form>
+    
+    {% else %}
+    <p>
+        Please <a href="{{ url_for('login') }}">log in</a> to post a comment.
+    </p>
+    {% endif %}
 </div>
 
 {% if issue.status == 'Resolved' %}
