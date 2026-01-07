@@ -518,8 +518,7 @@ def login():
         if user and user.check_password(password):
             login_user(user)
             flash('Logged in successfully', 'success')
-            next_page = request.args.get('next') or url_for('dashboard')
-            return redirect(next_page)
+            return redirect(url_for('home'))
         else:
             flash('Invalid credentials', 'error')
             return render_template_string(LOGIN_PAGE)
