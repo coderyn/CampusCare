@@ -256,7 +256,7 @@ def dashboard():
 
     category_stats = get_category_stats()
     status_stats = get_status_stats()
-    recent_issues = Issue.query.order_by(Issue.created_at.desc()).limit(10).all()
+    recent_issues = Issue.query.order_by(Issue.id.desc()).limit(10).all()
 
     # Calculate percentages
     open_percentage = round((open_issues / total_issues * 100), 1) if total_issues > 0 else 0
