@@ -61,8 +61,13 @@
     {% if issue.comments %}
         <ul class="comment-list">
             {% for comment in issue.comments %}
-                <li class="comment-item">
+    <li class="comment-item">
     <div class="comment-header">
+
+        <div class="comment-username">
+            {{ comment.user.username }}
+        </div>
+        
         <span class="comment-text">{{ comment.content }}</span>
 
         {% if comment.edit_token in my_tokens %}

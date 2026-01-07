@@ -123,6 +123,9 @@ class Comment(db.Model):
         db.ForeignKey('issue.id'),
         nullable=False
     )
+    
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user = db.relationship('User')
 
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -368,6 +371,7 @@ def view_issue(issue_id):
         comment_text = request.form.get('comment')
         new_comment = Comment(
             issue_id=issue.id,
+            user_id=current_user.id,
             content=comment_text.strip(),
             edit_token=token
             )

@@ -441,6 +441,14 @@ main {
     padding: 10px 0;
 }
 
+.comment-username {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #2c3e50;
+    margin-bottom: 4px;
+}
+
+
 .comment-meta {
     font-size: 0.8rem;
     color: #777;
