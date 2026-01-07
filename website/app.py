@@ -404,8 +404,16 @@ def view_issue(issue_id):
         avg_rating = round(avg_rating, 1) if avg_rating else None
 
         rating_count = Rating.query.filter_by(issue_id=issue.id).count()
+        
+    has_rated = False
+    if 'rater_token' in session:
+        existing = Rating.query.filter_by(
+        issue_id=issue.id,
+        rater_token=session['rater_token']
+    ).first()
+    has_rated = existing is not None
 
-    return render_template('view_issue.html', issue=issue, avg_rating=avg_rating, rating_count=rating_count)
+    return render_template('view_issue.html', issue=issue, avg_rating=avg_rating, rating_count=rating_count, has_rated=has_rated)
 
 # ========== ADMIN ROUTES ==========
 @app.route('/admin/issues')
@@ -579,6 +587,7 @@ def edit_comment(comment_id):
 
 
 @app.route('/issue/<int:issue_id>/rate', methods=['POST'])
+@login_required
 def rate_issue(issue_id):
     issue = Issue.query.get_or_404(issue_id)
 

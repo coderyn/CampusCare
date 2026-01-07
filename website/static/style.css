@@ -383,6 +383,12 @@ main {
     background-color: #f8f9fa;
 }
 
+.issue-rating {
+    margin-top: 32px;   /* space ABOVE rating */
+    padding-top: 16px;
+    border-top: 1px solid #eee;  /* optional but nice */
+}
+
 .issue-title {
     font-weight: 500;
     color: #333;
@@ -434,6 +440,28 @@ main {
     font-size: 0.8rem;
 }
 
+.login-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+  padding: 10px 12px;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  background: #fafafa;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.login-banner .btn {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+
+.login-banner-bottom {
+  margin-top: 20px;
+  background: #fcfcfc;
+}
 
 
 /*comment*/
@@ -441,6 +469,16 @@ main {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
+}
+
+.comment-left {
+    display: flex;
+    flex-direction: column;  /* stack username + text */
+}
+
+.comment-text {
+    margin-top: 4px;
+    font-size: 0.9rem;
 }
 
 .comment-list {
