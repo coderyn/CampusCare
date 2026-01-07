@@ -308,6 +308,7 @@ def issues_list():
                          status_filter=status)
 
 @app.route('/issue/new', methods=['GET', 'POST'])
+@login_required
 def new_issue():
     """Report new issue (with media upload placeholder)"""
     if request.method == 'POST':
