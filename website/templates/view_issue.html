@@ -128,6 +128,26 @@
     <p>No ratings yet.</p>
   {% endif %}
 
+  {% if ratings %}
+  <div class="rating-feedback">
+    <h4>User Feedback</h4>
+
+    {% for r in ratings %}
+      {% if r.feedback %}
+        <div class="feedback-item">
+          <span class="feedback-stars">
+            {% for i in range(1, 6) %}
+              {% if i <= r.score %}★{% else %}☆{% endif %}
+            {% endfor %}
+          </span>
+          <p class="feedback-text">{{ r.feedback }}</p>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+{% endif %}
+
+
   {% if current_user.is_authenticated %}
     {% if has_rated %}
       <p class="rating-info">
@@ -137,12 +157,22 @@
       <form method="POST" action="{{ url_for('rate_issue', issue_id=issue.id) }}">
         <!-- stars -->
         <div class="star-rating">
-          <input type="radio" id="star1" name="rating" value="1" required><label for="star1">★</label>
-          <input type="radio" id="star2" name="rating" value="2"><label for="star2">★</label>
-          <input type="radio" id="star3" name="rating" value="3"><label for="star3">★</label>
-          <input type="radio" id="star4" name="rating" value="4"><label for="star4">★</label>
-          <input type="radio" id="star5" name="rating" value="5"><label for="star5">★</label>
-        </div>
+  <input type="radio" id="star5" name="rating" value="5" required />
+  <label for="star5" title="5 stars">★</label>
+
+  <input type="radio" id="star4" name="rating" value="4" />
+  <label for="star4" title="4 stars">★</label>
+
+  <input type="radio" id="star3" name="rating" value="3" />
+  <label for="star3" title="3 stars">★</label>
+
+  <input type="radio" id="star2" name="rating" value="2" />
+  <label for="star2" title="2 stars">★</label>
+
+  <input type="radio" id="star1" name="rating" value="1" />
+  <label for="star1" title="1 star">★</label>
+</div>
+
 
         <div class="form-group">
           <textarea name="feedback" rows="3"

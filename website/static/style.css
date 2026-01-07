@@ -430,6 +430,13 @@ main {
   color: #f5b301;
 }
 
+.avg-stars {
+  font-size: 22px;
+  color: #f5b301;
+  margin-bottom: 8px;
+}
+
+
 .rating-actions {
     text-align: right;
     margin-top: 10px;
@@ -439,6 +446,27 @@ main {
     padding: 4px 10px;
     font-size: 0.8rem;
 }
+
+.rating-feedback {
+    margin-top: 16px;
+}
+
+.feedback-item {
+    padding: 8px 0;
+    border-top: 1px solid #eee;
+}
+
+.feedback-stars {
+    color: #f5b301;
+    font-size: 0.9rem;
+}
+
+.feedback-text {
+    font-size: 0.9rem;
+    color: #444;
+    margin-top: 4px;
+}
+
 
 .login-banner {
   display: flex;
