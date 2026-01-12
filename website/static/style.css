@@ -16,6 +16,7 @@ body {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 20px;
+    margin-top: 2rem;
 }
 
 /* Navigation */
@@ -316,6 +317,7 @@ main {
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1.5rem;
     margin-bottom: 2rem;
+    margin-top: 2rem;
 }
 
 .stat-card {
@@ -383,6 +385,12 @@ main {
     background-color: #f8f9fa;
 }
 
+.issue-rating {
+    margin-top: 32px;   /* space ABOVE rating */
+    padding-top: 16px;
+    border-top: 1px solid #eee;  /* optional but nice */
+}
+
 .issue-title {
     font-weight: 500;
     color: #333;
@@ -424,6 +432,13 @@ main {
   color: #f5b301;
 }
 
+.avg-stars {
+  font-size: 22px;
+  color: #f5b301;
+  margin-bottom: 8px;
+}
+
+
 .rating-actions {
     text-align: right;
     margin-top: 10px;
@@ -434,6 +449,49 @@ main {
     font-size: 0.8rem;
 }
 
+.rating-feedback {
+    margin-top: 16px;
+}
+
+.feedback-item {
+    padding: 8px 0;
+    border-top: 1px solid #eee;
+}
+
+.feedback-stars {
+    color: #f5b301;
+    font-size: 0.9rem;
+}
+
+.feedback-text {
+    font-size: 0.9rem;
+    color: #444;
+    margin-top: 4px;
+}
+
+
+.login-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+  padding: 10px 12px;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  background: #fafafa;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.login-banner .btn {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+
+.login-banner-bottom {
+  margin-top: 20px;
+  background: #fcfcfc;
+}
 
 
 /*comment*/
@@ -441,6 +499,16 @@ main {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
+}
+
+.comment-left {
+    display: flex;
+    flex-direction: column;  /* stack username + text */
+}
+
+.comment-text {
+    margin-top: 4px;
+    font-size: 0.9rem;
 }
 
 .comment-list {
@@ -453,6 +521,14 @@ main {
     border-bottom: 1px solid #eee;
     padding: 10px 0;
 }
+
+.comment-username {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #2c3e50;
+    margin-bottom: 4px;
+}
+
 
 .comment-meta {
     font-size: 0.8rem;
