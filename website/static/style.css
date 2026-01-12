@@ -16,6 +16,7 @@ body {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 20px;
+    margin-top: 2rem;
 }
 
 /* Navigation */
@@ -30,6 +31,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin: 0 auto;
 }
 
 .nav-brand {
@@ -316,6 +318,7 @@ main {
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 1.5rem;
     margin-bottom: 2rem;
+    margin-top: 2rem;
 }
 
 .stat-card {
